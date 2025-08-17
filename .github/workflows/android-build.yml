@@ -1,0 +1,43 @@
+name: Build KAT APK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    env:
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Decode Keystore
+        run: |
+          echo $KEYSTORE_BASE64 | base64 --decode > kat.jks
+
+      - name: Build APK
+        run: ./gradlew assembleRelease -Pandroid.injected.signing.store.file=kat.jks \
+                                        -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD \
+                                        -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+                                        -Pandroid.injected.signing.key.password=$KEY_PASSWORD
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: kat-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
